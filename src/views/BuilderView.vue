@@ -93,11 +93,11 @@
 
             <div v-if="isSimulatingChat"
                class="p-3 border-2 border-black bg-gray-100 self-start text-sm flex items-center justify-between shrink-0 w-full max-w-[95%]">
-               <div class="flex items-center gap-2">
-                 <i class="pi pi-spin pi-spinner"></i> AI is thinking and coding...
+               <div class="flex items-center gap-2 font-bold font-mono">
+                 <i class="pi pi-spin pi-spinner text-neo-pink"></i> Thinking...
                </div>
-               <button @click="stopAI" class="bg-red-500 text-white font-black text-xs px-2 py-1 border-2 border-black hover:bg-red-600 transition-colors hover:-translate-y-0.5">
-                 <i class="pi pi-stop"></i> STOP
+               <button @click="stopAI" class="bg-red-500 text-white font-black text-xs px-2.5 py-1 border-2 border-black hover:bg-red-600 transition-colors hover:-translate-y-0.5 cursor-pointer flex items-center gap-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                 <i class="pi pi-stop font-bold"></i> STOP
                </button>
             </div>
          </div>
@@ -486,11 +486,19 @@ The final code MUST be beautiful at first glance and immediately executable.`
          let isTyping = false
          let streamFinished = false
          let lastRenderTime = 0
+         let timerId = null
+
+         const onAbort = () => {
+            if (timerId) clearTimeout(timerId)
+            isTyping = false
+            reject({ name: 'AbortError' })
+         }
+
+         signal.addEventListener('abort', onAbort, { once: true })
 
          const typeQueue = () => {
             if (signal.aborted) {
-               isTyping = false
-               reject({ name: 'AbortError' })
+               onAbort()
                return
             }
             
@@ -522,10 +530,13 @@ The final code MUST be beautiful at first glance and immediately executable.`
                   }
                }
                
-               setTimeout(typeQueue, isInCodeBlock ? 1 : 15)
+               timerId = setTimeout(typeQueue, isInCodeBlock ? 1 : 15)
             } else {
                isTyping = false
-               if (streamFinished) resolve()
+               if (streamFinished) {
+                  signal.removeEventListener('abort', onAbort)
+                  resolve()
+               }
             }
          }
 
@@ -533,15 +544,22 @@ The final code MUST be beautiful at first glance and immediately executable.`
             systemPrompt,
             activePage.value.chatHistory,
             (chunk) => {
+               if (signal.aborted) return;
                fullResponse += chunk
                queue += chunk
                if (!isTyping) typeQueue()
             },
             () => { 
                streamFinished = true
-               if (!isTyping) resolve()
+               if (!isTyping) {
+                  signal.removeEventListener('abort', onAbort)
+                  resolve()
+               }
             },
-            (err) => { reject(err) },
+            (err) => { 
+               signal.removeEventListener('abort', onAbort)
+               reject(err)
+            },
             currentAbortController.value.signal
          )
       })
@@ -564,6 +582,7 @@ const stopAI = () => {
    if (currentAbortController.value) {
       currentAbortController.value.abort()
    }
+   isSimulatingChat.value = false
 }
 
 const scrollToBottom = () => {

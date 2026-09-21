@@ -1,0 +1,13 @@
+{
+  "adminerPort": 8002,
+  "ai_default": "9router",
+  "providers": {
+    "9router": {
+      "key": "{key}",
+      "url": "{url}",
+      "models": [
+        "{Combo}"
+      ]
+    }
+  }
+}

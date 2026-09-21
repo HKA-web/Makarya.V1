@@ -35,7 +35,6 @@ out
 .env
 .env.*.local
 config.json
-config copy.json
 
 # Editor directories and files
 .vscode/*

@@ -1,47 +1,661 @@
 <template>
- <div class="p-6 lg:p-10">
- <div class="mb-10 text-center">
- <h2 class="text-4xl md:text-5xl font-black uppercase mb-4 inline-block bg-neo-green dark:bg-white dark:text-black px-4 py-2 border-4 border-black transform -rotate-2 dark:border-[#222]">Dev Community</h2>
- <p class="font-mono font-bold mt-4 text-xl">Join 10,000+ developers sharing.</p>
- </div>
+  <div class="p-4 lg:p-8 max-w-7xl mx-auto font-sans">
+    <!-- Top Bar: Live GitHub Repository Sync Badge -->
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-[#111] border-4 border-black dark:border-[#333] p-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.15)]">
+      <div class="flex items-center gap-2 font-mono text-xs font-bold">
+        <span class="inline-block w-3 h-3 rounded-full bg-neo-green animate-pulse"></span>
+        <span class="dark:text-white uppercase font-black">GitHub Live Sync:</span>
+        <a
+          :href="`https://github.com/${communityStore.repoOwner}/${communityStore.repoName}/issues`"
+          target="_blank"
+          class="bg-black text-white dark:bg-white dark:text-black px-2 py-0.5 hover:bg-neo-yellow hover:text-black font-black flex items-center gap-1 transition-all"
+        >
+          <i class="pi pi-github"></i>
+          {{ communityStore.repoOwner }}/{{ communityStore.repoName }}
+        </a>
+      </div>
 
- <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
- <!-- Disucssion List -->
- <div class="lg:col-span-2 flex flex-col gap-6">
- <div v-for="i in 4" :key="i" class="bg-white border-4 border-black p-5 flex gap-4 dark:bg-[#0a0a0a] dark:border-[#222]">
- <div class="w-12 h-12 bg-neo-purple text-black dark:bg-white dark:text-black border-2 border-black rounded-full flex-shrink-0 flex items-center justify-center font-bold text-xl dark:border-[#222]">U{{i}}</div>
- <div>
- <div class="flex gap-2 items-center mb-1">
- <span class="font-bold bg-neo-green text-black dark:bg-white dark:text-black px-2 py-0.5 text-xs">@dev_master</span>
- <span class="font-mono text-xs text-gray-500 dark:text-gray-400">2 hours ago</span>
- </div>
- <h4 class="font-black text-xl uppercase mb-2">How to handle Stripe webhooks safely?</h4>
- <p class="font-mono text-sm mb-4">I've been trying to implement Stripe webhooks but I'm getting signature verification errors in production...</p>
- <div class="flex gap-4">
- <button class="font-bold font-mono text-sm hover:text-neo-pink"><i class="pi pi-comment"></i> 12 Replies</button>
- <button class="font-bold font-mono text-sm hover:text-neo-green"><i class="pi pi-thumbs-up"></i> 45 Likes</button>
- </div>
- </div>
- </div>
- </div>
+      <div class="flex items-center gap-2">
+        <!-- GitHub Token Settings Button -->
+        <button
+          @click="openTokenModal"
+          :class="[
+            'font-mono font-bold text-xs px-3 py-1 border-2 border-black flex items-center gap-1 transition-all cursor-pointer',
+            communityStore.githubToken
+              ? 'bg-neo-green text-black font-black'
+              : 'bg-gray-100 dark:bg-[#222] dark:text-white hover:bg-neo-yellow hover:text-black'
+          ]"
+          title="Configure optional GitHub PAT for direct API posting & Private Repos"
+        >
+          <i class="pi pi-key"></i>
+          <span>{{ communityStore.githubToken ? 'PAT Active' : 'Set PAT Token' }}</span>
+        </button>
 
- <!-- Sidebar Community -->
- <div class="flex flex-col gap-6">
- <div class="bg-neo-blue text-black dark:bg-white dark:text-black border-4 border-black p-5 dark:border-[#222]">
- <h3 class="font-black text-2xl uppercase mb-4 border-b-4 border-black pb-2 dark:border-[#222]">Top Discussion</h3>
- <ul class="flex flex-col gap-3 font-mono font-bold">
- <li class="flex items-center justify-between"><span>1. @sarah_codes</span> <span class="bg-white border-2 border-black px-2 dark:bg-[#0a0a0a] dark:border-[#222]">1,240 user</span></li>
- <li class="flex items-center justify-between"><span>2. @api_ninja</span> <span class="bg-white border-2 border-black px-2 dark:bg-[#0a0a0a] dark:border-[#222]">980 user</span></li>
- <li class="flex items-center justify-between"><span>3. @johndoe</span> <span class="bg-white border-2 border-black px-2 dark:bg-[#0a0a0a] dark:border-[#222]">845 user</span></li>
- </ul>
- </div>
- <button class="w-full bg-black text-white dark:bg-white dark:text-black border-4 border-black font-black text-xl py-4 uppercase hover:-translate-y-1 hover: transition-all dark:border-[#222]">
- New Discussion
- </button>
- </div>
- </div>
- </div>
+        <!-- Refresh Live Discussions -->
+        <button
+          @click="communityStore.fetchGitHubDiscussions()"
+          :disabled="communityStore.isLoading"
+          class="font-mono font-bold text-xs px-3 py-1 bg-neo-blue text-black border-2 border-black hover:bg-neo-pink flex items-center gap-1 transition-all cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50"
+        >
+          <i :class="['pi', 'pi-refresh', communityStore.isLoading ? 'animate-spin' : '']"></i>
+          <span>{{ communityStore.isLoading ? 'Syncing...' : 'Sync Live' }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Private Repo Warning Alert Banner -->
+    <div
+      v-if="communityStore.isPrivateRepo && !communityStore.githubToken"
+      class="mb-6 p-4 bg-neo-pink text-black border-4 border-black font-mono shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+    >
+      <div>
+        <h4 class="font-black text-sm uppercase flex items-center gap-2">
+          <i class="pi pi-lock text-base"></i>
+          Private Repository Detected ({{ communityStore.repoOwner }}/{{ communityStore.repoName }})
+        </h4>
+        <p class="text-xs font-bold mt-1">
+          GitHub API requires authentication for private repositories. Please enter a Personal Access Token (PAT) with <code class="bg-black text-white px-1">repo</code> scope to sync live discussions.
+        </p>
+      </div>
+      <button
+        @click="openTokenModal"
+        class="bg-black text-white font-black text-xs px-4 py-2 uppercase border-2 border-black hover:bg-white hover:text-black transition-all flex-shrink-0 cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+      >
+        Set PAT Token Now
+      </button>
+    </div>
+
+    <!-- Header Title -->
+    <div class="mb-8 text-center">
+      <h2 class="text-3xl md:text-5xl font-black uppercase mb-3 inline-block bg-neo-green dark:bg-white dark:text-black px-6 py-2 border-4 border-black dark:border-[#333] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] transform -rotate-1">
+        Dev Discussions & Q&A
+      </h2>
+      <p class="font-mono font-bold mt-2 text-base md:text-lg text-gray-700 dark:text-gray-300">
+        Live community discussions powered by GitHub Issues & Discussions API.
+      </p>
+    </div>
+
+    <!-- Main Content Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+      <!-- Left Column: Search, Tag Filters & Discussion List -->
+      <div class="lg:col-span-2 flex flex-col gap-6">
+        <!-- Search & Filter Controls -->
+        <div class="bg-white dark:bg-[#111] border-4 border-black dark:border-[#333] p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.15)] flex flex-col gap-3">
+          <!-- Search Bar -->
+          <div class="relative flex items-center">
+            <i class="pi pi-search absolute left-3 text-gray-500 text-lg"></i>
+            <input
+              v-model="communityStore.searchQuery"
+              type="text"
+              placeholder="Search GitHub discussions, topics, or authors..."
+              class="w-full pl-10 pr-4 py-2.5 font-mono font-bold text-sm bg-gray-50 dark:bg-[#1a1a1a] dark:text-white border-2 border-black dark:border-[#444] focus:outline-none focus:bg-white dark:focus:bg-[#222]"
+            />
+            <button
+              v-if="communityStore.searchQuery"
+              @click="communityStore.searchQuery = ''"
+              class="absolute right-3 font-mono text-xs font-bold text-gray-400 hover:text-black dark:hover:text-white cursor-pointer"
+            >
+              CLEAR
+            </button>
+          </div>
+
+          <!-- Tag Chips Filter -->
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="font-mono text-xs font-black uppercase text-gray-500 dark:text-gray-400 mr-1">Tags:</span>
+            <button
+              v-for="tag in communityStore.tags"
+              :key="tag"
+              @click="communityStore.selectedTag = tag"
+              :class="[
+                'px-3 py-1 font-mono text-xs font-black uppercase border-2 border-black transition-all cursor-pointer',
+                communityStore.selectedTag === tag
+                  ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                  : 'bg-white text-black dark:bg-[#222] dark:text-gray-200 dark:border-[#444] hover:bg-neo-yellow hover:text-black'
+              ]"
+            >
+              #{{ tag }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading State Skeleton -->
+        <div v-if="communityStore.isLoading && communityStore.discussions.length === 0" class="flex flex-col gap-4">
+          <div v-for="i in 3" :key="i" class="bg-white dark:bg-[#111] border-4 border-black p-5 animate-pulse flex gap-4">
+            <div class="w-12 h-12 bg-gray-300 dark:bg-[#333] rounded-full"></div>
+            <div class="flex-1 space-y-2">
+              <div class="h-4 bg-gray-300 dark:bg-[#333] w-1/4"></div>
+              <div class="h-6 bg-gray-300 dark:bg-[#333] w-3/4"></div>
+              <div class="h-4 bg-gray-200 dark:bg-[#222] w-full"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Discussion Posts List -->
+        <div v-else-if="communityStore.filteredDiscussions.length > 0" class="flex flex-col gap-4">
+          <div
+            v-for="post in communityStore.filteredDiscussions"
+            :key="post.id"
+            class="bg-white dark:bg-[#111] border-4 border-black dark:border-[#333] p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.15)] flex flex-col md:flex-row gap-4 transition-all hover:-translate-y-0.5"
+          >
+            <!-- Author Avatar -->
+            <div class="flex-shrink-0">
+              <img
+                v-if="post.avatarUrl"
+                :src="post.avatarUrl"
+                :alt="post.author"
+                class="w-12 h-12 rounded-full border-2 border-black dark:border-white object-cover shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+              />
+              <div
+                v-else
+                :class="[
+                  'w-12 h-12 rounded-full border-2 border-black dark:border-white flex items-center justify-center font-black text-lg text-black dark:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]',
+                  post.avatarColor || 'bg-neo-green'
+                ]"
+              >
+                {{ post.author.substring(0, 2).toUpperCase() }}
+              </div>
+            </div>
+
+            <!-- Post Details -->
+            <div class="flex-1 flex flex-col justify-between">
+              <div>
+                <!-- Metadata & Tag -->
+                <div class="flex flex-wrap items-center gap-2 mb-2">
+                  <a
+                    :href="`https://github.com/${post.author}`"
+                    target="_blank"
+                    class="font-bold bg-black text-white dark:bg-white dark:text-black px-2 py-0.5 text-xs font-mono hover:bg-neo-pink hover:text-black transition-colors"
+                  >
+                    @{{ post.author }}
+                  </a>
+                  <span class="font-mono text-xs font-bold text-gray-500 dark:text-gray-400">
+                    {{ post.createdAt }}
+                  </span>
+                  <span v-if="post.number" class="font-mono text-xs font-black text-gray-400 dark:text-gray-500">
+                    #{{ post.number }}
+                  </span>
+                  <span class="font-mono text-xs font-black uppercase bg-neo-yellow text-black border border-black px-2 py-0.5 ml-auto">
+                    #{{ post.tag }}
+                  </span>
+                </div>
+
+                <!-- Title -->
+                <h3
+                  @click="openDetailModal(post)"
+                  class="font-black text-xl uppercase mb-2 cursor-pointer hover:text-neo-pink dark:hover:text-neo-yellow transition-colors leading-snug"
+                >
+                  {{ post.title }}
+                </h3>
+
+                <!-- Content snippet -->
+                <p class="font-mono text-sm text-gray-700 dark:text-gray-300 mb-4 line-clamp-3 leading-relaxed">
+                  {{ post.content }}
+                </p>
+              </div>
+
+              <!-- Action Bar: Like, Comments & GitHub Link -->
+              <div class="flex flex-wrap items-center gap-3 pt-3 border-t-2 border-gray-200 dark:border-[#222]">
+                <!-- Like Button -->
+                <button
+                  @click="communityStore.toggleLike(post.id)"
+                  :class="[
+                    'font-mono font-bold text-xs px-3 py-1.5 border-2 border-black dark:border-[#444] flex items-center gap-2 transition-all cursor-pointer',
+                    post.isLiked
+                      ? 'bg-neo-pink text-black border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                      : 'bg-gray-100 dark:bg-[#222] dark:text-white hover:bg-neo-pink hover:text-black'
+                  ]"
+                >
+                  <i :class="['pi', post.isLiked ? 'pi-heart-fill text-red-600' : 'pi-heart']"></i>
+                  <span>{{ post.likes }} Upvotes</span>
+                </button>
+
+                <!-- Replies Count Button -->
+                <button
+                  @click="openDetailModal(post)"
+                  class="font-mono font-bold text-xs px-3 py-1.5 bg-gray-100 dark:bg-[#222] dark:text-white border-2 border-black dark:border-[#444] hover:bg-neo-blue hover:text-black flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <i class="pi pi-comments"></i>
+                  <span>{{ post.commentsCount || post.replies.length }} Replies</span>
+                </button>
+
+                <!-- View on GitHub External Link -->
+                <a
+                  v-if="post.githubUrl"
+                  :href="post.githubUrl"
+                  target="_blank"
+                  class="font-mono font-bold text-xs px-3 py-1.5 bg-white dark:bg-[#1a1a1a] dark:text-white border-2 border-black dark:border-[#444] hover:bg-neo-green hover:text-black flex items-center gap-1.5 transition-all ml-auto"
+                >
+                  <i class="pi pi-external-link"></i>
+                  <span>GitHub ↗</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty Search Result State -->
+        <div
+          v-else
+          class="bg-white dark:bg-[#111] border-4 border-black dark:border-[#333] p-8 text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+        >
+          <i class="pi pi-search-minus text-4xl text-gray-400 mb-3"></i>
+          <h4 class="font-black text-xl uppercase mb-2">No discussions found</h4>
+          <p class="font-mono text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Try adjusting your search terms or selecting a different tag filter.
+          </p>
+          <button
+            @click="openNewPostModal"
+            class="bg-neo-green text-black font-black font-mono text-sm border-2 border-black px-4 py-2 hover:bg-neo-yellow transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer"
+          >
+            + ASK A QUESTION
+          </button>
+        </div>
+      </div>
+
+      <!-- Right Column Sidebar: Actions & Top Discussions -->
+      <div class="flex flex-col gap-6">
+        <!-- New Post CTA Box -->
+        <div class="bg-neo-green dark:bg-white text-black border-4 border-black dark:border-[#333] p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)]">
+          <h3 class="font-black text-xl uppercase mb-2">Ask on GitHub Community</h3>
+          <p class="font-mono text-xs font-bold mb-4">
+            Post your question here to publish directly on the <strong>HKA-web/Makarya.Plugins</strong> GitHub repository.
+          </p>
+          <button
+            @click="openNewPostModal"
+            class="w-full bg-black text-white dark:bg-black dark:text-white border-2 border-black font-black text-base py-3 uppercase hover:bg-neo-pink hover:text-black hover:-translate-y-0.5 transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <i class="pi pi-plus-circle text-lg"></i>
+            <span>New Discussion</span>
+          </button>
+        </div>
+
+        <!-- Top Discussions Ranking -->
+        <div class="bg-white dark:bg-[#111] border-4 border-black dark:border-[#333] p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.15)]">
+          <h3 class="font-black text-xl uppercase mb-4 border-b-4 border-black dark:border-[#333] pb-2 flex items-center gap-2">
+            <i class="pi pi-bolt text-neo-pink"></i>
+            Top Discussions
+          </h3>
+          <ul class="flex flex-col gap-3 font-mono">
+            <li
+              v-for="(topPost, index) in communityStore.topDiscussions"
+              :key="topPost.id"
+              @click="openDetailModal(topPost)"
+              class="p-2.5 border-2 border-black dark:border-[#333] bg-gray-50 dark:bg-[#1a1a1a] hover:bg-neo-yellow hover:text-black dark:hover:bg-neo-yellow dark:hover:text-black cursor-pointer transition-colors"
+            >
+              <div class="flex items-center justify-between text-xs font-black mb-1">
+                <span class="text-gray-500 dark:text-gray-400">#{{ index + 1 }} • @{{ topPost.author }}</span>
+                <span class="bg-black text-white dark:bg-white dark:text-black px-1.5 py-0.5">
+                  {{ topPost.likes }} likes
+                </span>
+              </div>
+              <p class="font-bold text-xs uppercase line-clamp-2 leading-snug">
+                {{ topPost.title }}
+              </p>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- NEW DISCUSSION MODAL -->
+    <div
+      v-if="showNewPostModal"
+      class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 backdrop-blur-xs"
+    >
+      <div class="bg-white dark:bg-[#111] border-4 border-black dark:border-white w-full max-w-2xl p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.2)]">
+        <div class="flex justify-between items-center border-b-4 border-black dark:border-white pb-3 mb-4">
+          <h3 class="font-black text-2xl uppercase flex items-center gap-2">
+            <i class="pi pi-github text-neo-pink"></i>
+            Create GitHub Discussion
+          </h3>
+          <button
+            @click="showNewPostModal = false"
+            class="font-black text-xl hover:text-red-500 cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+
+        <form @submit.prevent="submitNewDiscussion" class="flex flex-col gap-4 font-mono">
+          <!-- Author Handle -->
+          <div>
+            <label class="block text-xs font-black uppercase mb-1">Your GitHub Handle / Name</label>
+            <input
+              v-model="newPostForm.author"
+              type="text"
+              placeholder="e.g. your_github_username"
+              required
+              class="w-full p-2.5 bg-gray-50 dark:bg-[#222] dark:text-white border-2 border-black dark:border-[#444] text-sm font-bold focus:outline-none"
+            />
+          </div>
+
+          <!-- Tag / Category -->
+          <div>
+            <label class="block text-xs font-black uppercase mb-1">Category Tag</label>
+            <select
+              v-model="newPostForm.tag"
+              class="w-full p-2.5 bg-gray-50 dark:bg-[#222] dark:text-white border-2 border-black dark:border-[#444] text-sm font-bold focus:outline-none uppercase"
+            >
+              <option value="laravel">#laravel</option>
+              <option value="vue">#vue</option>
+              <option value="mcp">#mcp</option>
+              <option value="database">#database</option>
+              <option value="general">#general</option>
+              <option value="bugs">#bugs</option>
+            </select>
+          </div>
+
+          <!-- Title -->
+          <div>
+            <label class="block text-xs font-black uppercase mb-1">Question Title</label>
+            <input
+              v-model="newPostForm.title"
+              type="text"
+              placeholder="e.g. How to handle authentication in Vue 3 with Laravel API?"
+              required
+              class="w-full p-2.5 bg-gray-50 dark:bg-[#222] dark:text-white border-2 border-black dark:border-[#444] text-sm font-bold focus:outline-none"
+            />
+          </div>
+
+          <!-- Content -->
+          <div>
+            <label class="block text-xs font-black uppercase mb-1">Problem Description / Details</label>
+            <textarea
+              v-model="newPostForm.content"
+              rows="5"
+              placeholder="Describe your question or code issue in detail..."
+              required
+              class="w-full p-2.5 bg-gray-50 dark:bg-[#222] dark:text-white border-2 border-black dark:border-[#444] text-sm font-bold focus:outline-none"
+            ></textarea>
+          </div>
+
+          <!-- Info Box regarding PAT vs Browser -->
+          <div class="p-3 bg-neo-yellow text-black border-2 border-black text-xs font-bold">
+            <span v-if="communityStore.githubToken">
+              ✓ <strong>PAT Token Active</strong>: Discussion will be submitted directly via GitHub REST API.
+            </span>
+            <span v-else>
+              ℹ <strong>Direct Submission</strong>: Clicking submit will create post locally AND open GitHub pre-filled issue form for instant publishing.
+            </span>
+          </div>
+
+          <!-- Submit Buttons -->
+          <div class="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              @click="showNewPostModal = false"
+              class="px-5 py-2.5 border-2 border-black dark:border-white font-black text-sm uppercase bg-gray-200 dark:bg-[#333] dark:text-white hover:bg-gray-300 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-6 py-2.5 border-2 border-black font-black text-sm uppercase bg-neo-green text-black hover:bg-neo-yellow shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer flex items-center gap-2"
+            >
+              <i class="pi pi-send"></i>
+              <span>Submit Discussion</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- DISCUSSION DETAIL & REPLIES MODAL -->
+    <div
+      v-if="selectedPost"
+      class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 backdrop-blur-xs"
+    >
+      <div class="bg-white dark:bg-[#111] border-4 border-black dark:border-white w-full max-w-3xl max-h-[90vh] flex flex-col p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.2)]">
+        <!-- Modal Header -->
+        <div class="flex justify-between items-start border-b-4 border-black dark:border-white pb-3 mb-4 flex-shrink-0">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="font-mono text-xs font-black bg-neo-yellow text-black px-2 py-0.5 border border-black">
+                #{{ selectedPost.tag }}
+              </span>
+              <span class="font-mono text-xs font-bold text-gray-500 dark:text-gray-400">
+                Posted by @{{ selectedPost.author }} • {{ selectedPost.createdAt }}
+              </span>
+            </div>
+            <h3 class="font-black text-xl md:text-2xl uppercase leading-snug pr-4">
+              {{ selectedPost.title }}
+            </h3>
+          </div>
+          <button
+            @click="selectedPost = null"
+            class="font-black text-2xl hover:text-red-500 flex-shrink-0 cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+
+        <!-- Scrollable Modal Body -->
+        <div class="overflow-y-auto flex-1 pr-2 flex flex-col gap-6 font-mono">
+          <!-- Main Post Body -->
+          <div class="bg-gray-50 dark:bg-[#1a1a1a] p-4 border-2 border-black dark:border-[#444]">
+            <p class="text-sm font-medium whitespace-pre-line leading-relaxed dark:text-gray-200">
+              {{ selectedPost.content }}
+            </p>
+
+            <div class="mt-4 pt-3 border-t border-gray-300 dark:border-[#333] flex justify-between items-center text-xs">
+              <a
+                v-if="selectedPost.githubUrl"
+                :href="selectedPost.githubUrl"
+                target="_blank"
+                class="font-black underline text-neo-purple dark:text-neo-yellow hover:text-neo-pink"
+              >
+                Open Issue on GitHub ↗
+              </a>
+              <span class="text-gray-400 font-bold">Issue #{{ selectedPost.number || 'Local' }}</span>
+            </div>
+          </div>
+
+          <!-- Replies Section -->
+          <div>
+            <h4 class="font-black text-base uppercase mb-3 flex items-center justify-between border-b-2 border-black dark:border-[#444] pb-1">
+              <span class="flex items-center gap-2">
+                <span>Replies ({{ selectedPost.replies.length }})</span>
+                <i v-if="communityStore.isSyncing" class="pi pi-spin pi-spinner text-neo-pink text-sm"></i>
+              </span>
+              <button
+                @click="communityStore.toggleLike(selectedPost.id)"
+                class="text-xs font-bold hover:text-neo-pink flex items-center gap-1 cursor-pointer"
+              >
+                <i :class="['pi', selectedPost.isLiked ? 'pi-heart-fill text-red-500' : 'pi-heart']"></i>
+                {{ selectedPost.likes }} Upvotes
+              </button>
+            </h4>
+
+            <!-- Replies List -->
+            <div v-if="selectedPost.replies.length > 0" class="flex flex-col gap-3">
+              <div
+                v-for="reply in selectedPost.replies"
+                :key="reply.id"
+                class="bg-white dark:bg-[#222] border-2 border-black dark:border-[#444] p-3 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+              >
+                <div class="flex items-center justify-between mb-1.5 text-xs">
+                  <span class="font-bold bg-black text-white dark:bg-white dark:text-black px-2 py-0.5">
+                    @{{ reply.author }}
+                  </span>
+                  <span class="text-gray-400 font-mono">{{ reply.createdAt }}</span>
+                </div>
+                <p class="text-xs text-gray-800 dark:text-gray-200 whitespace-pre-line leading-relaxed">
+                  {{ reply.content }}
+                </p>
+              </div>
+            </div>
+            <div v-else-if="!communityStore.isSyncing" class="text-xs text-gray-400 italic py-2">
+              No replies yet. Be the first to answer this question!
+            </div>
+          </div>
+        </div>
+
+        <!-- Add Reply Input Box -->
+        <div class="pt-4 mt-2 border-t-4 border-black dark:border-white flex-shrink-0 font-mono">
+          <form @submit.prevent="submitReply" class="flex gap-2">
+            <input
+              v-model="replyContent"
+              type="text"
+              placeholder="Write a reply comment..."
+              required
+              class="flex-1 p-2.5 bg-gray-50 dark:bg-[#222] dark:text-white border-2 border-black dark:border-[#444] text-xs font-bold focus:outline-none"
+            />
+            <button
+              type="submit"
+              class="px-5 py-2.5 bg-neo-green text-black font-black text-xs uppercase border-2 border-black hover:bg-neo-yellow shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer"
+            >
+              Reply
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- GITHUB PAT TOKEN MODAL -->
+    <div
+      v-if="showTokenModal"
+      class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 backdrop-blur-xs"
+    >
+      <div class="bg-white dark:bg-[#111] border-4 border-black dark:border-white w-full max-w-md p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.2)]">
+        <div class="flex justify-between items-center border-b-4 border-black dark:border-white pb-3 mb-4">
+          <h3 class="font-black text-xl uppercase flex items-center gap-2">
+            <i class="pi pi-key text-neo-pink"></i>
+            GitHub Token Settings
+          </h3>
+          <button @click="showTokenModal = false" class="font-black text-xl hover:text-red-500 cursor-pointer">
+            ✕
+          </button>
+        </div>
+
+        <form @submit.prevent="saveToken" class="font-mono text-xs flex flex-col gap-4">
+          <p class="text-gray-700 dark:text-gray-300 leading-relaxed">
+            Provide a GitHub Personal Access Token (PAT) with <code class="bg-gray-200 dark:bg-[#333] px-1 py-0.5">repo</code> scope. Required for <strong>Private Repositories</strong> and direct API posting.
+          </p>
+
+          <div>
+            <label class="block font-black uppercase mb-1">GitHub Personal Access Token (PAT)</label>
+            <input
+              v-model="tokenInput"
+              type="password"
+              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+              required
+              class="w-full p-2.5 bg-gray-50 dark:bg-[#222] dark:text-white border-2 border-black dark:border-[#444] font-bold focus:outline-none"
+            />
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2">
+            <button
+              v-if="communityStore.githubToken"
+              type="button"
+              @click="clearToken"
+              class="px-4 py-2 bg-red-500 text-white font-black uppercase border-2 border-black hover:bg-red-600 cursor-pointer"
+            >
+              Remove
+            </button>
+            <button
+              type="submit"
+              class="px-5 py-2 bg-neo-green text-black font-black uppercase border-2 border-black hover:bg-neo-yellow shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer"
+            >
+              Save Token
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
+import { ref } from 'vue'
+import { useCommunityStore } from '@/stores/communityStore'
+import { useToast } from '@/composables/useToast'
+
+const communityStore = useCommunityStore()
+const toast = useToast()
+
+const showNewPostModal = ref(false)
+const showTokenModal = ref(false)
+const selectedPost = ref(null)
+
+const tokenInput = ref('')
+
+const newPostForm = ref({
+  author: 'dev_user',
+  tag: 'laravel',
+  title: '',
+  content: ''
+})
+
+const replyContent = ref('')
+
+const openTokenModal = () => {
+  tokenInput.value = communityStore.githubToken || ''
+  showTokenModal.value = true
+}
+
+const openNewPostModal = () => {
+  newPostForm.value.title = ''
+  newPostForm.value.content = ''
+  showNewPostModal.value = true
+}
+
+const saveToken = () => {
+  if (!tokenInput.value || !tokenInput.value.trim()) {
+    toast.warning('Silakan masukkan GitHub PAT Token yang valid.', 'GitHub Sync')
+    return
+  }
+  communityStore.setGithubToken(tokenInput.value.trim())
+  showTokenModal.value = false
+  toast.success('GitHub Personal Access Token berhasil disimpan!', 'GitHub Sync')
+}
+
+const clearToken = () => {
+  tokenInput.value = ''
+  communityStore.setGithubToken('')
+  showTokenModal.value = false
+  toast.info('GitHub Token removed.', 'GitHub Sync')
+}
+
+const submitNewDiscussion = async () => {
+  if (!newPostForm.value.title || !newPostForm.value.content) return
+
+  const result = await communityStore.addDiscussion({
+    title: newPostForm.value.title,
+    tag: newPostForm.value.tag,
+    content: newPostForm.value.content,
+    author: newPostForm.value.author || 'you'
+  })
+
+  showNewPostModal.value = false
+
+  if (result.mode === 'github') {
+    toast.success('Discussion published directly to GitHub!', 'GitHub Sync')
+  } else {
+    toast.success('Discussion saved locally!', 'Community')
+    if (result.post?.githubUrl) {
+      window.open(result.post.githubUrl, '_blank')
+    }
+  }
+}
+
+const openDetailModal = async (post) => {
+  selectedPost.value = post
+  await communityStore.fetchReplies(post)
+}
+
+const submitReply = async () => {
+  if (!replyContent.value.trim() || !selectedPost.value) return
+
+  const res = await communityStore.addReply(selectedPost.value, {
+    content: replyContent.value,
+    author: 'you'
+  })
+
+  replyContent.value = ''
+  if (res?.mode === 'github') {
+    toast.success('Comment posted to GitHub!', 'GitHub Sync')
+  } else {
+    toast.success('Reply submitted locally!', 'Community')
+  }
+}
 </script>
