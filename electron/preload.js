@@ -69,5 +69,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onExternalFileChange: (callback) => {
     ipcRenderer.removeAllListeners('ide:external-file-change');
     ipcRenderer.on('ide:external-file-change', (_event, data) => callback(data));
+  },
+  onFileTreeChange: (callback) => {
+    ipcRenderer.removeAllListeners('ide:file-tree-changed');
+    ipcRenderer.on('ide:file-tree-changed', (_event, data) => callback(data));
   }
 })

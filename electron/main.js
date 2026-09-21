@@ -110,6 +110,8 @@ process.env.VITE_PUBLIC = app.isPackaged ? process.env.DIST : path.join(process.
 let win
 const terminals = new Map()
 let currentWatcher = null
+let watcherDebounceTimer = null
+let backendAllFilesCache = []
 const recentlyWrittenFiles = new Set()
 const fileCache = new Map()
 
@@ -248,7 +250,21 @@ function createWindow() {
       const filePath = path.join(dirPath, filename)
       const IGNORE = new Set(['node_modules', '.git', 'vendor', 'dist', '.idea', '.vscode'])
       const parts = filename.split(path.sep)
-      if (parts.some(p => IGNORE.has(p) || p.startsWith('.'))) return
+      if (parts.some(p => IGNORE.has(p) || (p.startsWith('.') && p !== '.makarya'))) return
+
+      // Invalidate file cache when file structure or files change
+      backendAllFilesCache = []
+
+      // Debounce notifying renderer about file tree changes
+      if (watcherDebounceTimer) clearTimeout(watcherDebounceTimer)
+      watcherDebounceTimer = setTimeout(() => {
+        if (win && !win.isDestroyed()) {
+          win.webContents.send('ide:file-tree-changed', {
+            path: filePath.replace(/\\/g, '/'),
+            eventType
+          })
+        }
+      }, 250)
 
       if (recentlyWrittenFiles.has(filePath)) return
 
@@ -271,7 +287,7 @@ function createWindow() {
           })
         }
       } catch (err) {
-        console.error('Error reading changed file:', err)
+        // File might have been deleted or inaccessible
       }
     })
 
@@ -438,7 +454,6 @@ function createWindow() {
   })
 
   // Backend caching for file list to avoid IPC floods
-  let backendAllFilesCache = []
 
   ipcMain.handle('fs:getAllFiles', async (_event, dirPath) => {
     // We cache this in the backend and only return a small slice if requested
@@ -539,12 +554,15 @@ function createWindow() {
     shell.showItemInFolder(filePath)
   })
 
-  // Image Upload for Plugin (Claude Agent)
+  // File / Image Attachment for Chat Agent & Plugins
   ipcMain.handle('dialog:openImageFile', async () => {
     const result = await dialog.showOpenDialog(win, {
-      title: 'Pilih Gambar',
+      title: 'Pilih File / Dokumen / Gambar',
       filters: [
-        { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'] }
+        { name: 'All Files', extensions: ['*'] },
+        { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'] },
+        { name: 'Documents & Data', extensions: ['pdf', 'txt', 'md', 'json', 'csv', 'doc', 'docx', 'xls', 'xlsx', 'xml', 'yaml', 'yml'] },
+        { name: 'Source Code', extensions: ['js', 'ts', 'vue', 'php', 'py', 'java', 'c', 'cpp', 'cs', 'go', 'rs', 'rb', 'html', 'css', 'sql', 'sh', 'bat'] }
       ],
       properties: ['openFile']
     })

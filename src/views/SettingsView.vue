@@ -117,6 +117,77 @@
         </div>
       </div>
 
+      <!-- GitHub Community Integration Card -->
+      <div class="bg-white border-4 border-black p-6 relative dark:bg-[#0a0a0a] dark:border-[#222]">
+        <div class="absolute -top-4 -right-4 bg-neo-green text-black dark:bg-white dark:text-black font-black px-4 py-1 border-4 border-black transform rotate-1 dark:border-[#222]">
+          COMMUNITY
+        </div>
+        
+        <div class="flex justify-between items-center mb-6 border-b-2 border-dashed border-gray-300 pb-4 dark:border-[#333]">
+          <h2 class="font-black uppercase text-xl flex items-center gap-2">
+            <i class="pi pi-github text-2xl"></i> GitHub Token Settings
+          </h2>
+          <span
+            :class="[
+              'font-mono text-xs font-black uppercase px-2.5 py-1 border-2',
+              communityStore.githubToken
+                ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
+                : 'bg-gray-100 text-gray-500 border-gray-400 dark:bg-[#1a1a1a] dark:text-gray-400 dark:border-[#444]'
+            ]"
+          >
+            {{ communityStore.githubToken ? 'PAT Active' : 'Not Configured' }}
+          </span>
+        </div>
+
+        <p class="font-mono text-xs text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
+          Provide a GitHub Personal Access Token (PAT) with <code class="bg-gray-200 dark:bg-[#262626] dark:text-white px-1.5 py-0.5 font-bold">repo</code> scope. Required for <strong>Private Repositories</strong>, direct discussion & reply posting, live synchronization, and reaction upvotes on <strong>{{ communityStore.repoOwner }}/{{ communityStore.repoName }}</strong>.
+        </p>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block font-bold uppercase text-xs mb-1 dark:text-gray-300">GitHub Personal Access Token (PAT)</label>
+            <div class="relative flex items-center">
+              <input
+                :type="showPat ? 'text' : 'password'"
+                v-model="githubTokenInput"
+                class="w-full border-4 border-black p-3 pr-24 font-mono text-sm focus:outline-none transition-colors dark:border-[#333] dark:bg-[#0d0d0d] dark:text-gray-100"
+                placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              />
+              <div class="absolute right-3 flex items-center gap-2">
+                <button
+                  v-if="githubTokenInput"
+                  type="button"
+                  @click="githubTokenInput = ''"
+                  class="font-mono text-xs font-bold uppercase text-red-500 hover:text-red-700 cursor-pointer px-1 py-1"
+                  title="Clear token input"
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  @click="showPat = !showPat"
+                  class="font-mono text-xs font-bold uppercase text-gray-500 hover:text-black dark:hover:text-white cursor-pointer px-1 py-1"
+                >
+                  {{ showPat ? 'Hide' : 'Show' }}
+                </button>
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-2 mt-1.5 text-xs">
+              <p class="text-gray-500 font-mono dark:text-gray-400">
+                Kosongkan token jika hanya mengakses repository publik.
+              </p>
+              <a
+                href="https://github.com/settings/tokens"
+                target="_blank"
+                class="font-mono font-bold underline text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white flex items-center gap-1"
+              >
+                Generate token on GitHub ↗
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Action Footer -->
       <div class="flex sticky bottom-8 mt-8">
         <button
@@ -137,10 +208,12 @@
 import { ref, onMounted } from 'vue';
 import { useToast } from '@/composables/useToast';
 import { useRouter, useRoute } from 'vue-router';
+import { useCommunityStore } from '@/stores/communityStore';
 
 const toast = useToast();
 const router = useRouter();
 const route = useRoute();
+const communityStore = useCommunityStore();
 
 const isLoading = ref(true);
 const isSaving = ref(false);
@@ -151,10 +224,14 @@ const config = ref({
 });
 
 const providerList = ref([]);
+const githubTokenInput = ref(communityStore.githubToken || '');
+const showPat = ref(false);
 
 const loadConfig = async () => {
   isLoading.value = true;
   try {
+    githubTokenInput.value = communityStore.githubToken || '';
+
     if (window.electronAPI && window.electronAPI.getConfig) {
       const data = await window.electronAPI.getConfig();
       if (data) {
@@ -162,6 +239,11 @@ const loadConfig = async () => {
           adminerPort: data.adminerPort || 8002,
           ai_default: data.ai_default || ''
         };
+
+        if (!communityStore.githubToken && data.githubToken) {
+          communityStore.setGithubToken(data.githubToken);
+          githubTokenInput.value = data.githubToken;
+        }
 
         // Parse providers into array format for the UI
         const providers = data.providers || {};
@@ -213,11 +295,17 @@ const handleSaveConfig = async () => {
       config.value.ai_default = providerList.value[0].name.trim();
     }
 
+    // Sync GitHub token to community store
+    if (githubTokenInput.value.trim() !== communityStore.githubToken) {
+      communityStore.setGithubToken(githubTokenInput.value.trim());
+    }
+
     if (window.electronAPI && window.electronAPI.saveConfig) {
       const newConfig = {
         adminerPort: Number(config.value.adminerPort),
         ai_default: config.value.ai_default,
-        providers: providersObj
+        providers: providersObj,
+        githubToken: githubTokenInput.value.trim()
       };
       
       const success = await window.electronAPI.saveConfig(newConfig);
