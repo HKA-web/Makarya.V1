@@ -1,0 +1,72 @@
+{
+  "name": "makarya",
+  "description": "Makarya - AI App Builder",
+  "author": "Antigravity",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && electron-builder && node -e \"const fs=require('fs'); fs.existsSync('release/makarya') && fs.rmSync('release/makarya', {recursive:true, force:true}); fs.existsSync('release/win-unpacked') && fs.renameSync('release/win-unpacked', 'release/makarya')\"",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.50",
+    "@ai-sdk/google": "^4.0.65",
+    "@ai-sdk/openai": "^4.0.62",
+    "@ai-sdk/vue": "^4.0.94",
+    "@guolao/vue-monaco-editor": "^1.6.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@primevue/themes": "^4.5.4",
+    "@tanstack/vue-query": "^5.101.4",
+    "@xterm/addon-fit": "^0.11.0",
+    "ai": "^7.0.94",
+    "axios": "^1.19.0",
+    "file-saver": "^2.0.5",
+    "jszip": "^3.10.1",
+    "marked": "^18.0.10",
+    "node-pty": "^1.1.0",
+    "pinia": "^4.0.3",
+    "primeicons": "^8.0.0",
+    "primevue": "^4.5.5",
+    "vue": "^3.5.40",
+    "vue-advanced-chat": "^2.1.2",
+    "vue-router": "^5.2.0",
+    "vue3-lottie": "^3.3.1",
+    "xterm": "^5.3.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "electron": "^43.4.0",
+    "electron-builder": "^26.15.3",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.2.0",
+    "vite-plugin-electron": "^1.1.1",
+    "vite-plugin-electron-renderer": "^1.0.0"
+  },
+  "build": {
+    "appId": "com.makarya.app",
+    "productName": "Makarya",
+    "directories": {
+      "output": "release/"
+    },
+    "extraResources": [
+      "config.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "include": "installer.nsh"
+    },
+    "npmRebuild": false
+  }
+}

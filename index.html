@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <title>Makarya</title>
+  </head>
+  <body>
+    <div id="app">
+      <style>
+        .splash-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          width: 100vw;
+          background-color: #ffffff;
+          font-family: 'Space Grotesk', sans-serif;
+          color: #000000;
+          margin: 0;
+        }
+        .splash-box {
+          border: 4px solid #000000;
+          padding: 2rem 4rem;
+          background-color: #00FF94;
+          box-shadow: 8px 8px 0px 0px #000000;
+          text-align: center;
+          animation: pulse 1.5s infinite;
+        }
+        .splash-title {
+          font-size: 2.5rem;
+          font-weight: 900;
+          text-transform: uppercase;
+          margin-bottom: 0.5rem;
+          margin-top: 0;
+          letter-spacing: -0.05em;
+        }
+        .splash-subtitle {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 1rem;
+          font-weight: 700;
+        }
+        @keyframes pulse {
+          0% { transform: scale(1); box-shadow: 8px 8px 0px 0px #000000; }
+          50% { transform: scale(1.02); box-shadow: 12px 12px 0px 0px #000000; }
+          100% { transform: scale(1); box-shadow: 8px 8px 0px 0px #000000; }
+        }
+      </style>
+      <div class="splash-container">
+        <div class="splash-box">
+          <h1 class="splash-title">Makarya</h1>
+          <div class="splash-subtitle">INITIALIZING SYSTEM...</div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
